@@ -79,6 +79,8 @@ public:
     return ConstReverseIterator(this->begin());
   }
 
+  const Type &operator[](size_t offset) const noexcept { return *(this->m_Data + offset); }
+
   constexpr size_t Size() const noexcept { return this->m_SizeBytes; }
 
   constexpr size_t Length() const noexcept { return this->m_Len; }
