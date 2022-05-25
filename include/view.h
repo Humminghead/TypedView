@@ -12,26 +12,29 @@ namespace TypedView {
 template <class Type, class Enable = void> struct TypeTrait {};
 
 /**
- * @brief Specialization for integlal types
+ * @brief Specialization for integlal and floating types
  */
 template <class ValueType>
-struct TypeTrait <ValueType,typename std::enable_if<std::is_integral<ValueType>::value>::type>{
+struct TypeTrait<
+    ValueType,
+    typename std::enable_if<std::is_integral<ValueType>::value ||
+                            std::is_floating_point<ValueType>::value>::type> {
 
-    static constexpr bool eq(const ValueType &t1, const ValueType &t2) {
-      return t1 == t2;
-    }
+  static constexpr bool eq(const ValueType &t1, const ValueType &t2) {
+    return t1 == t2;
+  }
 
-    static constexpr bool lt(const ValueType &t1, const ValueType &t2) {
-      return t1 < t2;
-    }
+  static constexpr bool lt(const ValueType &t1, const ValueType &t2) {
+    return t1 < t2;
+  }
 
-    static constexpr std::size_t length(const size_t sizeInBytes) {
-      if constexpr (sizeof(ValueType) > 1) {
-        if (size_t rem = sizeInBytes % sizeof(ValueType); rem > 0)
-          return (sizeInBytes + (sizeof(ValueType) - rem)) / sizeof(ValueType);
-      }
-      return sizeInBytes / sizeof(ValueType);
+  static constexpr std::size_t length(const size_t sizeInBytes) {
+    if constexpr (sizeof(ValueType) > 1) {
+      if (size_t rem = sizeInBytes % sizeof(ValueType); rem > 0)
+        return (sizeInBytes + (sizeof(ValueType) - rem)) / sizeof(ValueType);
     }
+    return sizeInBytes / sizeof(ValueType);
+  }
 };
 
 /**
@@ -81,10 +84,24 @@ public:
 
   const Type &operator[](size_t offset) const noexcept { return *(this->m_Data + offset); }
 
+  const Type &operator+(size_t offset) const noexcept { return *(this->m_Data + offset); }
+
+  /*!
+   * \brief Returns the size of the view in bytes
+   * \return Size in bytes
+   */
   constexpr size_t Size() const noexcept { return this->m_SizeBytes; }
 
+  /*!
+   * \brief Returns the size of the view in viewed type
+   * \return Size in viewed type
+   */
   constexpr size_t Length() const noexcept { return this->m_Len; }
 
+  /*!
+   * \brief Returns type size in bytes
+   * \return Size in bytes
+   */
   constexpr size_t TypeSize() const noexcept { return sizeof(Type); }
 
   /**
@@ -127,13 +144,13 @@ private:
     return {{pointer[Nums]...}};
   }
 
-  const Type *m_Data;
-  const size_t m_SizeBytes;
-  const size_t m_Len;
+  const Type *m_Data{nullptr};
+  const size_t m_SizeBytes{0};
+  const size_t m_Len{0};
 };
 
 /**
- * @brief TypedView is a class for iterating over user data with a type set by the user
+ * @brief View is a class for iterating over user data with a type set by the user
  */
 template <typename... Types> class View {
 public:
@@ -154,4 +171,68 @@ public:
 private:
   std::tuple<BasicTypeView<Types, TypeTrait<Types>>...> m_Views;
 };
+
+template <typename... Types>
+class ViewReader{
+public:
+  __attribute__((__nonnull__))
+  ViewReader(const unsigned char *data, const size_t bytes)
+      : m_view(data, bytes) {}
+
+  ViewReader(const View<Types...>& view) : m_view(view) {}
+
+  template <typename T> auto ReadAs() noexcept(false) {
+    size_t byteOffsetCache = m_byteOffset;
+    auto v = m_view.template ViewAs<T>();
+
+    if (v.Size() < byteOffsetCache + v.TypeSize())
+      throw std::range_error("offset (" +
+                             std::to_string(byteOffsetCache + sizeof(T)) +
+                             ") is out of range!");
+
+    m_byteOffset += v.TypeSize();
+    return (v + (byteOffsetCache / v.TypeSize()));
+  }
+
+  /*!
+   * \brief Returns View class instance
+   * \return Link to View instance
+   */
+  auto& GetView() noexcept{
+      return m_view;
+  }
+
+  /*!
+   * \brief Returns current offset in bytes
+   * \return Offset in bytes
+   */
+  size_t GetOffset() noexcept{
+      return m_byteOffset;
+  }
+
+  /*!
+   * \brief Returns current offset in bytes
+   * \return Offset in bytes
+   */
+  void SetOffset(const size_t offset) noexcept{
+      m_byteOffset = offset;
+  }
+
+  template <typename T> auto MakeSubView(const size_t n) noexcept {
+    return MakeSubView<T>(m_byteOffset, n);
+  }
+
+  template <typename T>
+  auto MakeSubView(const size_t pos, const size_t n,
+                   bool increaseOffset = true) noexcept {
+    increaseOffset ? m_byteOffset += n * sizeof(T) : m_byteOffset += 0;
+    return m_view.template ViewAs<T>().SubView(pos, n);
+  }
+
+private:
+    size_t m_byteOffset{0};
+    View<Types...> m_view{};
+};
+
+
 }
