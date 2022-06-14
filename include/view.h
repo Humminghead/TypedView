@@ -149,11 +149,16 @@ private:
   const size_t m_Len{0};
 };
 
+template <typename... Types>
+class ViewReader;
+
 /**
  * @brief View is a class for iterating over user data with a type set by the user
  */
 template <typename... Types> class View {
 public:
+    using ReaderType = ViewReader<Types...>;
+
     __attribute__((__nonnull__))
     constexpr View(const unsigned char *data, const size_t bytes)
       : m_Views{std::make_tuple(
