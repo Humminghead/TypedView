@@ -42,6 +42,7 @@ struct TypeTrait<
  */
 template <typename Type, typename Traits> class BasicTypeView {
 public:
+  using ValueType = Type;
   using TraitsType = Traits;
   using ConstIterator = const Type *;
   using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
@@ -180,6 +181,8 @@ private:
 template <typename... Types>
 class ViewReader{
 public:
+  using ViewType = View<Types...>;
+
   __attribute__((__nonnull__))
   ViewReader(const unsigned char *data, const size_t bytes)
       : m_view(data, bytes) {}
