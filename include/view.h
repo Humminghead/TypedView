@@ -120,7 +120,7 @@ public:
                              std::to_string(m_Len) + ")");
 
     const size_t len = std::min(n, m_Len - (pos * TypeSize())) * TypeSize();
-    return BasicTypeView<Type, Traits>(m_Data + pos, len);
+    return BasicTypeView<Type, Traits>(reinterpret_cast<Type*>(((uint8_t*)m_Data + pos)), len);
   }
 
   /**
@@ -228,6 +228,14 @@ public:
 
   template <typename T> auto MakeSubView(const size_t n) noexcept {
     return MakeSubView<T>(m_byteOffset, n);
+  }
+
+  template <typename T>
+  auto MakeSubViewBySize(const size_t n,
+                   bool increaseOffset = true) noexcept {
+    increaseOffset ? m_byteOffset += n * sizeof(T) : m_byteOffset += 0;
+    auto tView = m_view.template ViewAs<T>();
+    return tView.SubView(m_byteOffset, n);
   }
 
   template <typename T>
