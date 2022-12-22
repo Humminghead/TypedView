@@ -40,7 +40,7 @@ struct TypeTrait<
 /**
  * @brief A non-owning reference a Type
  */
-template <typename Type, typename Traits> class BasicTypeView {
+template <typename Type, typename Traits = TypeTrait<Type>> class BasicTypeView {
 public:
   using ValueType = Type;
   using TraitsType = Traits;
@@ -52,7 +52,7 @@ public:
   constexpr BasicTypeView() : m_Data{nullptr}, m_SizeBytes{0}, m_Len{0} {}
 
   __attribute__((__nonnull__))
-  constexpr BasicTypeView(const Type *data, const size_t bytes)
+  constexpr BasicTypeView(/*const*/ Type *data, const size_t bytes)
       : m_Data{data}, m_SizeBytes{bytes}, m_Len{TraitsType::length(bytes)} {}
 
   constexpr ConstIterator begin() const noexcept { return this->m_Data; }
@@ -86,6 +86,10 @@ public:
   const Type &operator[](size_t offset) const noexcept { return *(this->m_Data + offset); }
 
   const Type &operator+(size_t offset) const noexcept { return *(this->m_Data + offset); }
+
+  Type &operator[](size_t offset) noexcept { return *(this->m_Data + offset); }
+
+  Type &operator+(size_t offset) noexcept { return *(this->m_Data + offset); }
 
   /*!
    * \brief Returns the size of the view in bytes
@@ -145,7 +149,7 @@ private:
     return {{pointer[Nums]...}};
   }
 
-  const Type *m_Data{nullptr};
+  Type *const m_Data{nullptr};
   const size_t m_SizeBytes{0};
   const size_t m_Len{0};
 };
