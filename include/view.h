@@ -211,11 +211,29 @@ public:
   }
 
   /*!
+   * \brief Returns BasicTypeView class instance based on type T
+   * \return BasicTypeView instance
+   */
+  template <class T>
+  auto GetViewAs() noexcept{
+      return m_view.template ViewAs<T>();
+  }
+
+  /*!
    * \brief Returns current offset in bytes
    * \return Offset in bytes
    */
   size_t GetOffset() noexcept{
       return m_byteOffset;
+  }
+
+  /*!
+   * \brief Return size of view depends of it type in bytes
+   * \return Size in bytes
+   */
+  template <class T>
+  size_t GetSizeByType() noexcept{
+      return GetViewAs<T>().Size();
   }
 
   /*!
