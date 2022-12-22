@@ -1,9 +1,9 @@
 #pragma once
 
+#include <array>
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
-#include <array>
 
 namespace TypedView {
 /**
@@ -40,7 +40,8 @@ struct TypeTrait<
 /**
  * @brief A non-owning reference a Type
  */
-template <typename Type, typename Traits = TypeTrait<Type>> class BasicTypeView {
+template <typename Type, typename Traits = TypeTrait<Type>>
+class BasicTypeView {
 public:
   using ValueType = Type;
   using TraitsType = Traits;
@@ -48,11 +49,10 @@ public:
   using ConstReverseIterator = std::reverse_iterator<ConstIterator>;
   using ReverseIterator = ConstReverseIterator;
 
-
   constexpr BasicTypeView() : m_Data{nullptr}, m_SizeBytes{0}, m_Len{0} {}
 
-  __attribute__((__nonnull__))
-  constexpr BasicTypeView(/*const*/ Type *data, const size_t bytes)
+  __attribute__((__nonnull__)) constexpr BasicTypeView(/*const*/ Type *data,
+                                                       const size_t bytes)
       : m_Data{data}, m_SizeBytes{bytes}, m_Len{TraitsType::length(bytes)} {}
 
   constexpr ConstIterator begin() const noexcept { return this->m_Data; }
@@ -83,9 +83,13 @@ public:
     return ConstReverseIterator(this->begin());
   }
 
-  const Type &operator[](size_t offset) const noexcept { return *(this->m_Data + offset); }
+  const Type &operator[](size_t offset) const noexcept {
+    return *(this->m_Data + offset);
+  }
 
-  const Type &operator+(size_t offset) const noexcept { return *(this->m_Data + offset); }
+  const Type &operator+(size_t offset) const noexcept {
+    return *(this->m_Data + offset);
+  }
 
   Type &operator[](size_t offset) noexcept { return *(this->m_Data + offset); }
 
@@ -124,7 +128,8 @@ public:
                              std::to_string(m_Len) + ")");
 
     const size_t len = std::min(n, m_Len - (pos * TypeSize())) * TypeSize();
-    return BasicTypeView<Type, Traits>(reinterpret_cast<Type*>(((uint8_t*)m_Data + pos)), len);
+    return BasicTypeView<Type, Traits>(
+        reinterpret_cast<Type *>(((uint8_t *)m_Data + pos)), len);
   }
 
   /**
@@ -134,12 +139,12 @@ public:
    * @param pos - position of the front edge of data (data begin)
    * @return Copy of data as std::array<Type,Sz>
    */
-  template<size_t Sz>
-  constexpr std::array<Type, Sz> SubArray(const size_t pos = 0){
-      auto l = std::min(pos, m_Len > Sz ? m_Len - Sz : m_Len);
-      return SubArrayImpl(
-          *reinterpret_cast<Type(*)[Sz]>((std::remove_cv_t<Type> *)m_Data + l),
-          std::make_index_sequence<Sz>{});
+  template <size_t Sz>
+  constexpr std::array<Type, Sz> SubArray(const size_t pos = 0) {
+    auto l = std::min(pos, m_Len > Sz ? m_Len - Sz : m_Len);
+    return SubArrayImpl(
+        *reinterpret_cast<Type(*)[Sz]>((std::remove_cv_t<Type> *)m_Data + l),
+        std::make_index_sequence<Sz>{});
   }
 
 private:
@@ -154,24 +159,25 @@ private:
   const size_t m_Len{0};
 };
 
-template <typename... Types>
-class ViewReader;
+template <typename... Types> class ViewReader;
 
 /**
- * @brief View is a class for iterating over user data with a type set by the user
+ * @brief View is a class for iterating over user data with a type set by the
+ * user
  */
 template <typename... Types> class View {
 public:
-    using ReaderType = ViewReader<Types...>;
+  using ReaderType = ViewReader<Types...>;
 
-    __attribute__((__nonnull__))
-    constexpr View(const unsigned char *data, const size_t bytes)
+  __attribute__((__nonnull__)) constexpr View(const unsigned char *data,
+                                              const size_t bytes)
       : m_Views{std::make_tuple(
             BasicTypeView<Types, TypeTrait<Types>>((Types *)data, bytes)...)} {}
 
   /**
    * @brief Views the data as iterable range of the selected type
-   * @return Return a BasicTypeView<Type> object that contains non-owning pointer to the data
+   * @return Return a BasicTypeView<Type> object that contains non-owning
+   * pointer to the data
    */
   template <typename Type>
   constexpr BasicTypeView<Type, TypeTrait<Type>> ViewAs() const noexcept {
@@ -182,8 +188,7 @@ private:
   std::tuple<BasicTypeView<Types, TypeTrait<Types>>...> m_Views;
 };
 
-template <typename... Types>
-class ViewReader{
+template <typename... Types> class ViewReader {
 public:
   using ViewType = View<Types...>;
 
@@ -191,7 +196,7 @@ public:
   ViewReader(const unsigned char *data, const size_t bytes)
       : m_view(data, bytes) {}
 
-  ViewReader(const View<Types...>& view) : m_view(view) {}
+  ViewReader(const View<Types...> &view) : m_view(view) {}
 
   template <typename T> auto ReadAs() noexcept(false) {
     size_t byteOffsetCache = m_byteOffset;
@@ -210,51 +215,42 @@ public:
    * \brief Returns View class instance
    * \return Link to View instance
    */
-  auto& GetView() noexcept{
-      return m_view;
-  }
+  auto &GetView() noexcept { return m_view; }
 
   /*!
    * \brief Returns BasicTypeView class instance based on type T
    * \return BasicTypeView instance
    */
-  template <class T>
-  auto GetViewAs() noexcept{
-      return m_view.template ViewAs<T>();
+  template <class T> auto GetViewAs() noexcept {
+    return m_view.template ViewAs<T>();
   }
 
   /*!
    * \brief Returns current offset in bytes
    * \return Offset in bytes
    */
-  size_t GetOffset() noexcept{
-      return m_byteOffset;
-  }
+  size_t GetOffset() noexcept { return m_byteOffset; }
 
   /*!
    * \brief Return size of view depends of it type in bytes
    * \return Size in bytes
    */
-  template <class T>
-  size_t GetSizeByType() noexcept{
-      return GetViewAs<T>().Size();
+  template <class T> size_t GetSizeByType() noexcept {
+    return GetViewAs<T>().Size();
   }
 
   /*!
    * \brief Returns current offset in bytes
    * \return Offset in bytes
    */
-  void SetOffset(const size_t offset) noexcept{
-      m_byteOffset = offset;
-  }
+  void SetOffset(const size_t offset) noexcept { m_byteOffset = offset; }
 
   template <typename T> auto MakeSubView(const size_t n) noexcept {
     return MakeSubView<T>(m_byteOffset, n);
   }
 
   template <typename T>
-  auto MakeSubViewBySize(const size_t n,
-                   bool increaseOffset = true) noexcept {
+  auto MakeSubViewBySize(const size_t n, bool increaseOffset = true) noexcept {
     increaseOffset ? m_byteOffset += n * sizeof(T) : m_byteOffset += 0;
     auto tView = m_view.template ViewAs<T>();
     return tView.SubView(m_byteOffset, n);
@@ -268,9 +264,8 @@ public:
   }
 
 private:
-    size_t m_byteOffset{0};
-    View<Types...> m_view{};
+  size_t m_byteOffset{0};
+  View<Types...> m_view{};
 };
 
-
-}
+} // namespace TypedView
